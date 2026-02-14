@@ -157,6 +157,28 @@
             </n-button>
             <n-button
               size="small"
+              @click="batchUseItems"
+              :disabled="
+                isRunning ||
+                selectedTokens.length === 0 ||
+                !isWeirdTowerActivityOpen
+              "
+            >
+              一键使用怪异塔道具
+            </n-button>
+            <n-button
+              size="small"
+              @click="batchMergeItems"
+              :disabled="
+                isRunning ||
+                selectedTokens.length === 0 ||
+                !isWeirdTowerActivityOpen
+              "
+            >
+              一键怪异塔合成(需要8级以上)
+            </n-button>
+            <n-button
+              size="small"
               @click="batchStudy"
               :disabled="isRunning || selectedTokens.length === 0"
             >
@@ -4087,7 +4109,7 @@ const tasksBottle = createTasksBottle(createTaskDeps());
 const { resetBottles, batchlingguanzi } = tasksBottle;
 
 const tasksTower = createTasksTower(createTaskDeps());
-const { climbTower, climbWeirdTower, batchClaimFreeEnergy, skinChallenge } = tasksTower;
+const { climbTower, climbWeirdTower, batchClaimFreeEnergy, skinChallenge, batchUseItems, batchMergeItems } = tasksTower;
 
 const tasksCar = createTasksCar(createTaskDeps());
 const { batchSmartSendCar, batchClaimCars } = tasksCar;

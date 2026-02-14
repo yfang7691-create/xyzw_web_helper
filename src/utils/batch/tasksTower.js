@@ -760,10 +760,214 @@ export function createTasksTower(deps) {
     currentRunningTokenId.value = null;
   };
 
+  /**
+   * 批量使用道具
+   */
+  const batchUseItems = async () => {
+    if (selectedTokens.value.length === 0) return;
+    isRunning.value = true;
+    shouldStop.value = false;
+
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value) return;
+      tokenStatus.value[tokenId] = "running";
+      const token = tokens.value.find((t) => t.id === tokenId);
+
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始使用道具: ${token.name} ===`,
+          type: "info",
+        });
+
+        await ensureConnection(tokenId);
+
+        // 1. 获取活动信息
+        const infoRes = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "mergebox_getinfo",
+          { actType: 1 },
+          5000
+        );
+
+        // 获取怪异塔信息以读取剩余道具数量
+        const towerInfoRes = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "evotower_getinfo",
+          {},
+          5000
+        );
+
+        if (!infoRes || !infoRes.mergeBox) {
+          throw new Error("获取活动信息失败");
+        }
+
+        let costTotalCnt = infoRes.mergeBox.costTotalCnt || 0;
+        let lotteryLeftCnt = towerInfoRes?.evoTower?.lotteryLeftCnt || 0;
+
+        if (lotteryLeftCnt <= 0) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 没有剩余道具可使用`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "completed";
+          return;
+        }
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 开始使用道具，剩余：${lotteryLeftCnt}，已用：${costTotalCnt}`,
+          type: "info",
+        });
+
+        let processedCount = 0;
+
+        while (lotteryLeftCnt > 0 && !shouldStop.value) {
+          let pos = {};
+          if (costTotalCnt < 2) {
+            pos = { gridX: 4, gridY: 5 };
+          } else if (costTotalCnt < 102) {
+            pos = { gridX: 7, gridY: 3 };
+          } else {
+            pos = { gridX: 6, gridY: 3 };
+          }
+
+          // 2. 使用道具
+          await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "mergebox_openbox",
+            {
+              actType: 1,
+              pos: pos
+            },
+            5000
+          );
+
+          costTotalCnt++;
+          lotteryLeftCnt--;
+          processedCount++;
+
+          await new Promise((res) => setTimeout(res, 500));
+        }
+
+        tokenStatus.value[tokenId] = "completed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 使用道具结束，共使用 ${processedCount} 次 ===`,
+          type: "success",
+        });
+
+      } catch (error) {
+        console.error(error);
+        tokenStatus.value[tokenId] = "failed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 使用道具失败: ${error.message}`,
+          type: "error",
+        });
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 断开连接`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+    isRunning.value = false;
+    currentRunningTokenId.value = null;
+    message.success("批量使用道具结束");
+  };
+
+  /**
+   * 批量合成
+   */
+  const batchMergeItems = async () => {
+    if (selectedTokens.value.length === 0) return;
+    isRunning.value = true;
+    shouldStop.value = false;
+
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value) return;
+      tokenStatus.value[tokenId] = "running";
+      const token = tokens.value.find((t) => t.id === tokenId);
+
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始一键合成: ${token.name} ===`,
+          type: "info",
+        });
+
+        await ensureConnection(tokenId);
+
+        // 调用合成接口
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "mergebox_automergeitem",
+          { actType: 1 },
+          10000 
+        );
+
+        tokenStatus.value[tokenId] = "completed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 一键合成完成 ===`,
+          type: "success",
+        });
+
+      } catch (error) {
+        console.error(error);
+        tokenStatus.value[tokenId] = "failed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 一键合成失败: ${error.message}`,
+          type: "error",
+        });
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 断开连接`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+    isRunning.value = false;
+    currentRunningTokenId.value = null;
+    message.success("批量一键合成结束");
+  };
+
   return {
     climbTower,
     climbWeirdTower,
     batchClaimFreeEnergy,
     skinChallenge,
+    batchUseItems,
+    batchMergeItems,
   };
+}
+
+/**
+ * 批量使用道具
+ * @param {Object} deps
+ */
+function batchUseItems(deps) {
+  // logic to be implemented inside createTasksTower or moved here if refactored
+  // But based on the file structure, I should add it inside createTasksTower
 }

@@ -40,6 +40,8 @@ const errorCodeMap = {
   2300250: "俱乐部BOSS今日攻打次数已用完",
   400010: "物品数量不足",
   7900023: "已达到使用次数上限",
+  12300040: "没有空格子了",
+  12300080: "未达到解锁条件",
 };
 
 // 事件节流定义表，根据实际需要调整命令和节流时间
@@ -227,6 +229,8 @@ export function registerDefaultCommands(reg) {
     .register("evotower_claimreward")
     .register("mergebox_getinfo")
     .register("mergebox_claimfreeenergy")
+    .register("mergebox_openbox")
+    .register("mergebox_automergeitem", { actType: 1 })
 
     // 瓶子机器人
     .register("bottlehelper_claim")
@@ -1032,8 +1036,10 @@ export class XyzwWebSocketClient {
       evotowerinforesp: "evotower_getinfo",
       evotower_fightresp: "evotower_fight",
       evotower_getlegionjoinmembersresp: "evotower_getlegionjoinmembers",
-      mergebox_getinforesp: "mergebox_getinfo",
+      mergeboxinforesp: "mergebox_getinfo",
       mergebox_claimfreeenergyresp: "mergebox_claimfreeenergy",
+      mergebox_openboxresp: "mergebox_openbox",
+      mergebox_automergeitemresp: "mergebox_automergeitem",
       item_openpackresp: "item_openpack",
       equipment_quenchresp: "equipment_quench",
       rank_getserverrankresp: "rank_getserverrank",
