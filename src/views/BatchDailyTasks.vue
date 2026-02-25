@@ -1745,6 +1745,10 @@
                 <label class="setting-label">默认鱼竿类型</label>
                 <n-select v-model:value="batchSettings.defaultFishType" :options="fishTypeOptions" size="small" style="width: 100px" />
               </div>
+            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
+              >智能发车条件设置(0为不限制)</n-divider
+            >
+            <div class="settings-grid">
               <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">保底车辆颜色</label>
                 <n-select
@@ -1763,8 +1767,31 @@
               </div>
               <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">车辆强制刷新保底</label>
-                <n-switch v-model:value="batchSettings.useGoldRefreshFallback" size="small" />
+                <n-switch v-model:value="batchSettings.useGoldRefreshFallback"/>
               </div>
+            </div>
+            <div class="settings-grid" v-if="batchSettings.useGoldRefreshFallback">
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">需同时满足所有条件</label>
+                <n-switch v-model:value="batchSettings.smartDepartureMatchAll"/>
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">金砖 >=</label>
+                <n-input-number v-model:value="batchSettings.smartDepartureGoldThreshold" :min="0" :step="100" size="small" style="width: 100px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">招募令 >=</label>
+                <n-input-number v-model:value="batchSettings.smartDepartureRecruitThreshold" :min="0" :step="10" size="small" style="width: 100px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">白玉 >=</label>
+                <n-input-number v-model:value="batchSettings.smartDepartureJadeThreshold" :min="0" :step="100" size="small" style="width: 100px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">刷新卷 >=</label>
+                <n-input-number v-model:value="batchSettings.smartDepartureTicketThreshold" :min="0" :step="1" size="small" style="width: 100px" />
+              </div>
+            </div>
             </div>
             <n-divider title-placement="left" style="margin: 12px 0 8px 0"
               >功法赠送设置</n-divider
@@ -1790,19 +1817,6 @@
               <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">列表每行数量</label>
                 <n-input-number v-model:value="batchSettings.tokenListColumns" :min="1" :max="10" :step="1" size="small" style="width: 100px" />
-              </div>
-            </div>
-            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
-              >系统维护设置</n-divider
-            >
-            <div class="settings-grid">
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <label class="setting-label">定时刷新页面</label>
-                <n-switch v-model:value="batchSettings.enableRefresh" />
-              </div>
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettings.enableRefresh">
-                <label class="setting-label">刷新间隔(分钟)</label>
-                <n-input-number v-model:value="batchSettings.refreshInterval" :min="10" :max="1440" :step="30" size="small" style="width: 100px" />
               </div>
             </div>
           </n-grid-item>
@@ -1861,6 +1875,19 @@
               <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">最大日志条目</label>
                 <n-input-number v-model:value="batchSettings.maxLogEntries" :min="100" :max="5000" :step="100" size="small" style="width: 100px" />
+              </div>
+            </div>
+            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
+              >系统维护设置</n-divider
+            >
+            <div class="settings-grid">
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">定时刷新页面</label>
+                <n-switch v-model:value="batchSettings.enableRefresh" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettings.enableRefresh">
+                <label class="setting-label">刷新间隔(分钟)</label>
+                <n-input-number v-model:value="batchSettings.refreshInterval" :min="10" :max="1440" :step="30" size="small" style="width: 100px" />
               </div>
             </div>
           </n-grid-item>
@@ -2463,6 +2490,11 @@ const batchSettings = reactive({
   // 页面刷新配置
   enableRefresh: false,
   refreshInterval: 360, // 分钟
+  smartDepartureGoldThreshold: 0,
+  smartDepartureRecruitThreshold: 0,
+  smartDepartureJadeThreshold: 0,
+  smartDepartureTicketThreshold: 0,
+  smartDepartureMatchAll: false,
 });
 
 // Load batch settings from localStorage
@@ -2881,6 +2913,11 @@ const exportConfig = () => {
         maxActive: batchSettings.maxActive,
         tokenListColumns: batchSettings.tokenListColumns,
         useGoldRefreshFallback: batchSettings.useGoldRefreshFallback,
+        smartDepartureGoldThreshold: batchSettings.smartDepartureGoldThreshold,
+        smartDepartureRecruitThreshold: batchSettings.smartDepartureRecruitThreshold,
+        smartDepartureJadeThreshold: batchSettings.smartDepartureJadeThreshold,
+        smartDepartureTicketThreshold: batchSettings.smartDepartureTicketThreshold,
+        smartDepartureMatchAll: batchSettings.smartDepartureMatchAll,
       },
       tokenSettings: tokenSettings,
     };
